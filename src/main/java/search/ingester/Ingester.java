@@ -45,6 +45,15 @@ public class Ingester implements RequestHandler<SQSEvent, Void> {
     private static final String UPSERT = "upsert";
     private static final String DELETE = "delete";
 
+    /**
+     * Handle an incoming SQS Message and insert into or delete from the relevant search index on a specified AWS
+     * Elasticsearch index
+     *
+     * @param event An incoming SQS event
+     * @param context Context object for that incoming event
+     * @throws RuntimeException Throws a runtime exception in the case of any caught exceptions
+     * @return Returns null if successful or throws a RuntimeException if something goes wrong
+     */
     public Void handleRequest(SQSEvent event, Context context)  {
         for (SQSMessage msg : event.getRecords()) {
             boolean isS3 = false;
@@ -117,6 +126,12 @@ public class Ingester implements RequestHandler<SQSEvent, Void> {
         return null;
     }
 
+    /**
+     * Create configured a High Level Elasticsearch REST client with an AWS http interceptor to sign the data package
+     * being sent
+     *
+     * @return A Configured High Level Elasticsearch REST client to send packets to an AWS ES service
+     */
     private RestHighLevelClient esClient() {
         AWS4Signer signer = new AWS4Signer();
         signer.setServiceName("es");
@@ -128,22 +143,42 @@ public class Ingester implements RequestHandler<SQSEvent, Void> {
                         .setHttpClientConfigCallback(callback -> callback.addInterceptorLast(interceptor)));
     }
 
+    /**
+     * Extracts a message from an S3 file (JSON)
+     *
+     * @param bucket The bucket that the file exists in
+     * @param key The full key of the file in the S3 Bucket
+     * @return A translated Message object generated from the JSON read from the given S3 file
+     * @throws IOException If the S3 file cannot be streamed down from S3 this error will be thrown
+     */
     private Message getMessageFromS3(String bucket, String key) throws IOException {
+        // Build S3 Client
         AmazonS3 s3Client = AmazonS3ClientBuilder.standard()
                 .withRegion(System.getenv("AWS_REGION"))
                 .withCredentials(new DefaultAWSCredentialsProviderChain())
                 .build();
+        // Get the object reference and build a buffered reader around it
         S3Object fullObject = s3Client.getObject(new GetObjectRequest(bucket, key));
         BufferedReader reader = new BufferedReader(new InputStreamReader(fullObject.getObjectContent()));
 
+        // Extract the JSON object as text from the input stream
         String text = "";
         String line;
         while ((line = reader.readLine()) != null){
             text = text + "\n" + line;
         }
+
+        // Return the extracted message object from the S3 JSON file
         return JsonbBuilder.create().fromJson(text, Message.class);
     }
 
+    /**
+     * Deletes a given file from S3 at the provided bucket / key location, this may fail but its not important if it
+     * does as it will be eventually caught by the buckets' lifecycle rules
+     *
+     * @param bucket The bucket to delete from
+     * @param key The full key of the object to be removed from the bucket
+     */
     private void deleteMessageFromS3(String bucket, String key) {
         AmazonS3 s3Client = AmazonS3ClientBuilder.standard()
                 .withRegion(System.getenv("AWS_REGION"))
@@ -153,13 +188,37 @@ public class Ingester implements RequestHandler<SQSEvent, Void> {
         s3Client.deleteObject(req);
     }
 
+    /**
+     * Creates a document template from an existing document template with an attached base64 encoded file in the
+     * content_base64 field. Attempt to overwrite the relevant parts of the given document template and remove extra
+     * whitespace characters from the content as they are not needed
+     *
+     * @param document A document template with a base64 encoded file attached in the content_base64 field
+     * @return A Document object with the base64 files text content and title in place of the given document template
+     * @throws IOException Thrown on an issue with opening the input stream containing the base64 encoded file
+     * @throws SAXException Thrown as part of the Tika package parsing the given document
+     * @throws TikaException Thrown as part of the Tika package parsing the given document
+     */
     private Document parseFile(Document document) throws IOException, SAXException, TikaException {
+        // Create auto document parser and try to extract some textual info from the base64 encoded string passed to it
         BodyContentHandler handler = new BodyContentHandler();
         AutoDetectParser parser = new AutoDetectParser();
         Metadata metadata = new Metadata();
         InputStream stream = new ByteArrayInputStream(Base64.getDecoder().decode(document.getContentBase64()));
         parser.parse(stream, handler, metadata);
-        document.setContent(handler.toString());
+
+        // Grab the extracted content from the parser and strip out all repeated whitespace characters as we don't need
+        // them, if no content don't replace the existing content
+        String newContent = handler.toString().replaceAll("\\s+", " ");
+        if (!newContent.isEmpty()) {
+            document.setContent(newContent);
+        }
+
+        // If a title exists in the document metadata replace the document title with it
+        if (metadata.get("title") != null) {
+            document.setTitle(metadata.get("title"));
+        }
+
         return document;
     }
 }
