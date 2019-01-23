@@ -2,7 +2,6 @@ package search.ingester;
 
 import com.amazonaws.auth.AWS4Signer;
 import com.amazonaws.auth.DefaultAWSCredentialsProviderChain;
-import com.amazonaws.auth.profile.ProfileCredentialsProvider;
 import com.amazonaws.http.AWSRequestSigningApacheInterceptor;
 import com.amazonaws.services.lambda.runtime.Context;
 import com.amazonaws.services.lambda.runtime.RequestHandler;
@@ -54,11 +53,10 @@ public class Ingester implements RequestHandler<SQSEvent, Void> {
             Jsonb jsonb = JsonbBuilder.create();
             Message message = jsonb.fromJson(msg.getBody(), Message.class);
 
-            if (message.getS3Bucket() != null && message.getS3Key() != null) {
+            if (message.getS3BucketName() != null && message.getS3Key() != null) {
                 // Is S3 message
-                System.out.println("Is an S3 message");
                 isS3 = true;
-                bucket = message.getS3Bucket();
+                bucket = message.getS3BucketName();
                 key = message.getS3Key();
 
                 try {
@@ -66,7 +64,6 @@ public class Ingester implements RequestHandler<SQSEvent, Void> {
                 } catch (IOException ex) {
                     throw new RuntimeException(ex);
                 }
-
             }
 
             Document document = message.getDocument();
@@ -134,7 +131,7 @@ public class Ingester implements RequestHandler<SQSEvent, Void> {
     private Message getMessageFromS3(String bucket, String key) throws IOException {
         AmazonS3 s3Client = AmazonS3ClientBuilder.standard()
                 .withRegion(System.getenv("AWS_REGION"))
-                .withCredentials(new ProfileCredentialsProvider())
+                .withCredentials(new DefaultAWSCredentialsProviderChain())
                 .build();
         S3Object fullObject = s3Client.getObject(new GetObjectRequest(bucket, key));
         BufferedReader reader = new BufferedReader(new InputStreamReader(fullObject.getObjectContent()));
@@ -144,14 +141,13 @@ public class Ingester implements RequestHandler<SQSEvent, Void> {
         while ((line = reader.readLine()) != null){
             text = text + "\n" + line;
         }
-        System.out.println("Message from s3 is: " + text);
         return JsonbBuilder.create().fromJson(text, Message.class);
     }
 
     private void deleteMessageFromS3(String bucket, String key) {
         AmazonS3 s3Client = AmazonS3ClientBuilder.standard()
                 .withRegion(System.getenv("AWS_REGION"))
-                .withCredentials(new ProfileCredentialsProvider())
+                .withCredentials(new DefaultAWSCredentialsProviderChain())
                 .build();
         DeleteObjectRequest req = new DeleteObjectRequest(bucket, key);
         s3Client.deleteObject(req);

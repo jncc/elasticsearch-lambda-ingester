@@ -10,9 +10,9 @@ public class Message {
     @JsonbProperty("document")
     private Document document;
 
-    @JsonbProperty("s3Bucket")
-    private String s3Bucket;
-    @JsonbProperty("s3Key")
+    @JsonbProperty("S3BucketName")
+    private String s3BucketName;
+    @JsonbProperty("S3Key")
     private String s3Key;
 
     public String getIndex() { return index; }
@@ -27,12 +27,10 @@ public class Message {
 
     public void setDocument(Document document) { this.document = document; }
 
-    public String getS3Bucket() {
-        return s3Bucket;
-    }
+    public String getS3BucketName() { return s3BucketName; }
 
-    public void setS3Bucket(String s3Bucket) {
-        this.s3Bucket = s3Bucket;
+    public void setS3BucketName(String s3BucketName) {
+        this.s3BucketName = s3BucketName;
     }
 
     public String getS3Key() {
