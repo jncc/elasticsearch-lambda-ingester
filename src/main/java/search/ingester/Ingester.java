@@ -209,7 +209,7 @@ public class Ingester implements RequestHandler<SQSEvent, Void> {
 
         // Grab the extracted content from the parser and strip out all repeated whitespace characters as we don't need
         // them, if no content don't replace the existing content
-        String newContent = handler.toString().replaceAll("\\s+", " ");
+        String newContent = handler.toString().replaceAll("\\s+", " ").trim();
         if (!newContent.isEmpty()) {
             document.setContent(newContent);
         }
