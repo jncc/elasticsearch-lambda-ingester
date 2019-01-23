@@ -219,6 +219,9 @@ public class Ingester implements RequestHandler<SQSEvent, Void> {
             document.setTitle(metadata.get("title"));
         }
 
+        // Clear b64 encoded file
+        document.setContentBase64(null);
+
         return document;
     }
 }

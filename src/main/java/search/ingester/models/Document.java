@@ -24,8 +24,8 @@ public class Document {
     private String url;
     @JsonbProperty("data_type")
     private String dataType;
-    @JsonbProperty("published")
-    private String published;
+    @JsonbProperty("published_date")
+    private String publishedDate;
     @JsonbProperty("parent_id")
     private String parentId;
     @JsonbProperty("parent_title")
@@ -104,12 +104,12 @@ public class Document {
         this.dataType = dataType;
     }
 
-    public String getPublished() {
-        return published;
+    public String getPublishedDate() {
+        return publishedDate;
     }
 
-    public void setPublished(String published) {
-        this.published = published;
+    public void setPublishedDate(String publishedDate) {
+        this.publishedDate = publishedDate;
     }
 
     public String getParentId() {
