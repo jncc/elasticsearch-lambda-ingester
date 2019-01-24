@@ -134,7 +134,10 @@ public class Ingester implements RequestHandler<SQSEvent, Void> {
                 try {
                     IndexRequest req = new IndexRequest(message.getIndex(), System.getenv(ENV_ES_DOCTYPE), document.getId());
                     req.source(jsonb.toJson(document), XContentType.JSON);
-                    req.setPipeline(System.getenv(ENV_ES_PIPELINE));
+                    // If a pipeline is specified, use it
+                    if (System.getenv(ENV_ES_PIPELINE) != null) {
+                        req.setPipeline(System.getenv(ENV_ES_PIPELINE));
+                    }
                     IndexResponse resp = esClient().index(req, RequestOptions.DEFAULT);
                     if (!(resp.getResult() == DocWriteResponse.Result.CREATED
                             || resp.getResult() == DocWriteResponse.Result.UPDATED)) {
