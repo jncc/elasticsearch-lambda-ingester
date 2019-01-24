@@ -35,15 +35,39 @@ import search.ingester.models.Message;
 
 import javax.json.bind.Jsonb;
 import javax.json.bind.JsonbBuilder;
+import javax.validation.ConstraintViolation;
+import javax.validation.Validation;
+import javax.validation.Validator;
+import javax.validation.ValidatorFactory;
 import java.io.*;
 
-
-
 import java.util.Base64;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 public class Ingester implements RequestHandler<SQSEvent, Void> {
+    /**
+     * Environment variable names
+     */
+    private static final String ENV_AWS_REGION = "AWS_REGION";
+    private static final String ENV_ES_ENDPOINT = "ES_ENDPOINT";
+    private static final String ENV_ES_MAX_PAYLOAD_SIZE = "ES_MAX_PAYLOAD_SIZE";
+    private static final String ENV_ES_PIPELINE = "ES_PIPELINE";
+    private static final String ENV_ES_DOCTYPE = "ES_DOCTYPE";
+
+    /**
+     * Available actions
+     */
     private static final String UPSERT = "upsert";
     private static final String DELETE = "delete";
+
+    /**
+     * Elasticsearch parameters
+     */
+    private static final String ES = "es";
+
+    // Only set up if we need to read an S3 message, otherwise left as null
+    private AmazonS3 s3Client;
 
     /**
      * Handle an incoming SQS Message and insert into or delete from the relevant search index on a specified AWS
@@ -56,15 +80,12 @@ public class Ingester implements RequestHandler<SQSEvent, Void> {
      */
     public Void handleRequest(SQSEvent event, Context context)  {
         for (SQSMessage msg : event.getRecords()) {
-            boolean isS3 = false;
             String bucket = "", key = "";
-
             Jsonb jsonb = JsonbBuilder.create();
             Message message = jsonb.fromJson(msg.getBody(), Message.class);
 
             if (message.getS3BucketName() != null && message.getS3Key() != null) {
-                // Is S3 message
-                isS3 = true;
+                this.s3Client = getS3Client();
                 bucket = message.getS3BucketName();
                 key = message.getS3Key();
 
@@ -78,6 +99,17 @@ public class Ingester implements RequestHandler<SQSEvent, Void> {
             Document document = message.getDocument();
 
             if (document.getContentBase64() != null) {
+                /** Something odd happening on some files being submitted to elasticsearch
+                if (s3Client == null ||
+                        (s3Client != null
+                                && s3Client.getObjectMetadata(bucket, key).getContentLength()
+                                    > Integer.parseInt(System.getenv(ENV_ES_MAX_PAYLOAD_SIZE)))) {
+                    try {
+                        document = parseFile(document);
+                    } catch (Exception err) {
+                        throw new RuntimeException(err);
+                    }
+                }**/
                 try {
                     document = parseFile(document);
                 } catch (Exception err) {
@@ -85,11 +117,24 @@ public class Ingester implements RequestHandler<SQSEvent, Void> {
                 }
             }
 
+            // Do some validation
+            ValidatorFactory factory = Validation.buildDefaultValidatorFactory();
+            Validator validator = factory.getValidator();
+            Set<ConstraintViolation<Document>> violations = validator.validate(document);
+
+            if (violations.size() > 0) {
+                throw new RuntimeException(
+                        violations.stream()
+                                .map(violation -> violation.getPropertyPath().toString() + ": " + violation.getMessage())
+                                .collect(Collectors.joining("\n")));
+            }
+
             // Send index request
             if (message.getVerb().equals(UPSERT)) {
                 try {
-                    IndexRequest req = new IndexRequest(message.getIndex(), "_doc", document.getId());
+                    IndexRequest req = new IndexRequest(message.getIndex(), System.getenv(ENV_ES_DOCTYPE), document.getId());
                     req.source(jsonb.toJson(document), XContentType.JSON);
+                    req.setPipeline(System.getenv(ENV_ES_PIPELINE));
                     IndexResponse resp = esClient().index(req, RequestOptions.DEFAULT);
                     if (!(resp.getResult() == DocWriteResponse.Result.CREATED
                             || resp.getResult() == DocWriteResponse.Result.UPDATED)) {
@@ -101,7 +146,7 @@ public class Ingester implements RequestHandler<SQSEvent, Void> {
                     throw new RuntimeException(ex);
                 }
             } else if (message.getVerb().equals(DELETE)) {
-                DeleteRequest req = new DeleteRequest(message.getIndex(), "_doc", document.getId());
+                DeleteRequest req = new DeleteRequest(message.getIndex(), System.getenv(ENV_ES_DOCTYPE), document.getId());
                 try {
                     DeleteResponse resp = esClient().delete(req, RequestOptions.DEFAULT);
                     if (resp.getResult() != DocWriteResponse.Result.DELETED) {
@@ -119,7 +164,7 @@ public class Ingester implements RequestHandler<SQSEvent, Void> {
             }
 
             // Cleanup if S3 message
-            if (isS3) {
+            if (this.s3Client != null) {
                 deleteMessageFromS3(bucket, key);
             }
         }
@@ -134,12 +179,12 @@ public class Ingester implements RequestHandler<SQSEvent, Void> {
      */
     private RestHighLevelClient esClient() {
         AWS4Signer signer = new AWS4Signer();
-        signer.setServiceName("es");
-        signer.setRegionName(System.getenv("AWS_REGION"));
+        signer.setServiceName(ES);
+        signer.setRegionName(System.getenv(ENV_AWS_REGION));
         HttpRequestInterceptor interceptor =
-                new AWSRequestSigningApacheInterceptor("es", signer, new DefaultAWSCredentialsProviderChain());
+                new AWSRequestSigningApacheInterceptor(ES, signer, new DefaultAWSCredentialsProviderChain());
         return new RestHighLevelClient(
-                RestClient.builder(HttpHost.create(System.getenv("ES_ENDPOINT")))
+                RestClient.builder(HttpHost.create(System.getenv(ENV_ES_ENDPOINT)))
                         .setHttpClientConfigCallback(callback -> callback.addInterceptorLast(interceptor)));
     }
 
@@ -152,11 +197,6 @@ public class Ingester implements RequestHandler<SQSEvent, Void> {
      * @throws IOException If the S3 file cannot be streamed down from S3 this error will be thrown
      */
     private Message getMessageFromS3(String bucket, String key) throws IOException {
-        // Build S3 Client
-        AmazonS3 s3Client = AmazonS3ClientBuilder.standard()
-                .withRegion(System.getenv("AWS_REGION"))
-                .withCredentials(new DefaultAWSCredentialsProviderChain())
-                .build();
         // Get the object reference and build a buffered reader around it
         S3Object fullObject = s3Client.getObject(new GetObjectRequest(bucket, key));
         BufferedReader reader = new BufferedReader(new InputStreamReader(fullObject.getObjectContent()));
@@ -180,12 +220,20 @@ public class Ingester implements RequestHandler<SQSEvent, Void> {
      * @param key The full key of the object to be removed from the bucket
      */
     private void deleteMessageFromS3(String bucket, String key) {
-        AmazonS3 s3Client = AmazonS3ClientBuilder.standard()
-                .withRegion(System.getenv("AWS_REGION"))
-                .withCredentials(new DefaultAWSCredentialsProviderChain())
-                .build();
         DeleteObjectRequest req = new DeleteObjectRequest(bucket, key);
         s3Client.deleteObject(req);
+    }
+
+    /**
+     * Returns a configured S3 client using environment variables / default provider chains
+     *
+     * @return A configured S3 client
+     */
+    private AmazonS3 getS3Client() {
+        return AmazonS3ClientBuilder.standard()
+                .withRegion(System.getenv(ENV_AWS_REGION))
+                .withCredentials(new DefaultAWSCredentialsProviderChain())
+                .build();
     }
 
     /**
