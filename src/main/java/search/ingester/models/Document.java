@@ -8,11 +8,12 @@ import org.hibernate.validator.constraints.NotBlank;
 import org.hibernate.validator.constraints.NotEmpty;
 import search.ingester.models.validators.NotBlankIfAnotherFieldIsBlank;
 
+import javax.validation.constraints.Min;
 import javax.validation.constraints.NotNull;
 import javax.validation.constraints.Pattern;
 import java.util.List;
 
-@NotBlankIfAnotherFieldIsBlank(fieldName="content", dependFieldName = "contentBase64")
+@NotBlankIfAnotherFieldIsBlank(fieldName="content", dependFieldName = "fileBase64")
 public class Document {
     @JsonbProperty("id")
     @NotNull
@@ -31,8 +32,14 @@ public class Document {
 
     @JsonbProperty("content")
     private String content;
-    @JsonbProperty("content_base64")
-    private String contentBase64;
+
+    @JsonbProperty("file_base64")
+    private String fileBase64;
+    @Min(1)
+    @JsonbProperty("file_size")
+    private Integer fileSize;
+    @JsonbProperty("file_extension")
+    private String fileExtension;
 
     @NotBlank
     @JsonbProperty("url")
@@ -81,12 +88,16 @@ public class Document {
     public void setContent(String content) {
         this.content = content;
     }
-    public String getContentBase64() {
-        return contentBase64;
+    public String getFileBase64() {
+        return fileBase64;
     }
-    public void setContentBase64(String contentBase64) {
-        this.contentBase64 = contentBase64;
+    public void setFileBase64(String fileBase64) {
+        this.fileBase64 = fileBase64;
     }
+    public int getFileSize() { return fileSize; }
+    public void setFileSize(int fileSize) { this.fileSize = fileSize; }
+    public String getFileExtension() { return fileExtension; }
+    public void setFileExtension(String fileExtension) { this.fileExtension = fileExtension; }
     public String getUrl() {
         return url;
     }
@@ -111,7 +122,7 @@ public class Document {
     public void setParentTitle(String parentTitle) { this.parentTitle = parentTitle; }
 
     public ImmutablePair<Boolean, String> nonAnnotationValidation() {
-        if (StringUtils.isBlank(contentBase64) && StringUtils.isBlank(content)) {
+        if (StringUtils.isBlank(fileBase64) && StringUtils.isBlank(content)) {
             return new ImmutablePair<>(false, "content and content_base64 fields are blank");
         }
         return new ImmutablePair<>(true, null);

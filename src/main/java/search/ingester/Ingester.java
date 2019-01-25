@@ -66,6 +66,11 @@ public class Ingester implements RequestHandler<SQSEvent, Void> {
      */
     private static final String ES = "es";
 
+    /**
+     * Tika parameters
+     */
+    private static final int TIKA_MAX_CHARACTER_LIMIT = -1;
+
     // Only set up if we need to read an S3 message, otherwise left as null
     private AmazonS3 s3Client;
 
@@ -98,7 +103,7 @@ public class Ingester implements RequestHandler<SQSEvent, Void> {
 
             Document document = message.getDocument();
 
-            if (document.getContentBase64() != null) {
+            if (document.getFileBase64() != null) {
                 /** Something odd happening on some files being submitted to elasticsearch
                 if (s3Client == null ||
                         (s3Client != null
@@ -252,11 +257,20 @@ public class Ingester implements RequestHandler<SQSEvent, Void> {
      */
     private Document parseFile(Document document) throws IOException, SAXException, TikaException {
         // Create auto document parser and try to extract some textual info from the base64 encoded string passed to it
-        BodyContentHandler handler = new BodyContentHandler();
+        BodyContentHandler handler = new BodyContentHandler(TIKA_MAX_CHARACTER_LIMIT);
         AutoDetectParser parser = new AutoDetectParser();
         Metadata metadata = new Metadata();
-        InputStream stream = new ByteArrayInputStream(Base64.getDecoder().decode(document.getContentBase64()));
-        parser.parse(stream, handler, metadata);
+        InputStream stream = new ByteArrayInputStream(Base64.getDecoder().decode(document.getFileBase64()));
+
+        try {
+            parser.parse(stream, handler, metadata);
+        } catch(SAXException ex) {
+            if (ex.getClass().getCanonicalName() != "org.apache.tika.sax.WriteOutContentHandler$WriteLimitReachedException") {
+                throw ex;
+            } else {
+                System.out.println(String.format("Got more characters than current Tika limit (%d), truncating to limit", TIKA_MAX_CHARACTER_LIMIT));
+            }
+        }
 
         // Grab the extracted content from the parser and strip out all repeated whitespace characters as we don't need
         // them, if no content don't replace the existing content
@@ -271,7 +285,7 @@ public class Ingester implements RequestHandler<SQSEvent, Void> {
         }
 
         // Clear b64 encoded file
-        document.setContentBase64(null);
+        document.setFileBase64(null);
 
         return document;
     }
