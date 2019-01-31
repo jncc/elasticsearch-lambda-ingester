@@ -15,9 +15,9 @@ import java.util.List;
 
 @NotBlankIfAnotherFieldIsBlank(fieldName="content", dependFieldName = "fileBase64")
 public class Document {
+    @NotBlank
+    //@Pattern(regexp = "^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$", message = "ID must be a UUID")
     @JsonbProperty("id")
-    @NotNull
-    @Pattern(regexp = "^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$", message = "ID must be a UUID")
     private String id;
     @NotBlank
     @Pattern(regexp = "datahub|website|mhc", flags = Pattern.Flag.CASE_INSENSITIVE, message = "Site must be datahub|website|mhc")
