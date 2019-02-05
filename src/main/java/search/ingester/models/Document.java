@@ -8,7 +8,6 @@ import org.hibernate.validator.constraints.NotBlank;
 import org.hibernate.validator.constraints.NotEmpty;
 import search.ingester.models.validators.NotBlankIfAnotherFieldIsBlank;
 
-import javax.validation.constraints.Min;
 import javax.validation.constraints.NotNull;
 import javax.validation.constraints.Pattern;
 import java.util.List;
@@ -35,17 +34,16 @@ public class Document {
 
     @JsonbProperty("file_base64")
     private String fileBase64;
-    @Min(1)
-    @JsonbProperty("file_size")
-    private Integer fileSize;
+    @JsonbProperty("file_bytes")
+    private Integer fileBytes;
     @JsonbProperty("file_extension")
     private String fileExtension;
 
-    @NotBlank
+    //@NotBlank
     @JsonbProperty("url")
     private String url;
-    @NotBlank
-    @JsonbProperty("data_type")
+    //@NotBlank
+    @JsonbProperty(value = "data_type", nillable = true)
     private String dataType;
     @NotNull
     @Pattern(regexp = "^([\\+-]?\\d{4}(?!\\d{2}\\b))((-?)((0[1-9]|1[0-2])(\\3([12]\\d|0[1-9]|3[01]))?|W([0-4]\\d|5[0-2])(-?[1-7])?|(00[1-9]|0[1-9]\\d|[12]\\d{2}|3([0-5]\\d|6[1-6])))([T\\s]((([01]\\d|2[0-3])((:?)[0-5]\\d)?|24\\:?00)([\\.,]\\d+(?!:))?)?(\\17[0-5]\\d([\\.,]\\d+)?)?([zZ]|([\\+-])([01]\\d|2[0-3]):?([0-5]\\d)?)?)?)?$", message = "Must be an ISO 8601 date")
@@ -94,8 +92,8 @@ public class Document {
     public void setFileBase64(String fileBase64) {
         this.fileBase64 = fileBase64;
     }
-    public int getFileSize() { return fileSize; }
-    public void setFileSize(int fileSize) { this.fileSize = fileSize; }
+    public Integer getFileBytes() { return fileBytes; }
+    public void setFileBytes(Integer fileBytes) { this.fileBytes = fileBytes; }
     public String getFileExtension() { return fileExtension; }
     public void setFileExtension(String fileExtension) { this.fileExtension = fileExtension; }
     public String getUrl() {
