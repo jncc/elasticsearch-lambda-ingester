@@ -53,7 +53,7 @@ public class Ingester implements RequestHandler<SQSEvent, Void> {
      */
     private static final String ENV_AWS_REGION = "AWS_REGION";
     private static final String ENV_ES_ENDPOINT = "ES_ENDPOINT";
-    private static final String ENV_ES_MAX_PAYLOAD_SIZE = "ES_MAX_PAYLOAD_SIZE";
+//  private static final String ENV_ES_MAX_PAYLOAD_SIZE = "ES_MAX_PAYLOAD_SIZE";
     private static final String ENV_ES_PIPELINE = "ES_PIPELINE";
     private static final String ENV_ES_DOCTYPE = "ES_DOCTYPE";
 
@@ -90,6 +90,8 @@ public class Ingester implements RequestHandler<SQSEvent, Void> {
             String bucket = "", key = "";
             Jsonb jsonb = JsonbBuilder.create();
             Message message = jsonb.fromJson(msg.getBody(), Message.class);
+
+            System.out.println(msg.getBody()); 
 
             if (message.getS3BucketName() != null && message.getS3Key() != null) {
                 this.s3Client = getS3Client();
