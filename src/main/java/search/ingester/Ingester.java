@@ -105,50 +105,50 @@ public class Ingester implements RequestHandler<SQSEvent, Void> {
 
             Document document = message.getDocument();
 
-            if (document.getFileBase64() != null) {
-                /** Something odd happening on some files being submitted to elasticsearch
-                if (s3Client == null ||
-                        (s3Client != null
-                                && s3Client.getObjectMetadata(bucket, key).getContentLength()
-                                    > Integer.parseInt(System.getenv(ENV_ES_MAX_PAYLOAD_SIZE)))) {
-                    try {
-                        document = parseFile(document);
-                    } catch (Exception err) {
-                        throw new RuntimeException(err);
-                    }
-                }**/
-                try {
-                    document = parseFile(document);
-                } catch (Exception err) {
-                    throw new RuntimeException(err);
-                }
-            } else {
-                try {
-                    // Try to detect HTML?
-                    //      Attempt HTML extraction?
-                    document = parseHTMLContentString(document);
-                    // Try to detect JSON?
-                    //      Attempt JSON extraction?
-                } catch (Exception err) {
-                    throw new RuntimeException(err);
-                }
-            }
-
-            // Do some validation
-            ValidatorFactory factory = Validation.buildDefaultValidatorFactory();
-            Validator validator = factory.getValidator();
-            Set<ConstraintViolation<Document>> violations = validator.validate(document);
-
-            if (violations.size() > 0) {
-                throw new RuntimeException(
-                        violations.stream()
-                                .map(violation -> violation.getPropertyPath().toString() + ": " + violation.getMessage())
-                                .collect(Collectors.joining("\n")));
-            }
-
             // Send index request
             if (message.getVerb().equals(UPSERT)) {
                 try {
+                    if (document.getFileBase64() != null) {
+                        /** Something odd happening on some files being submitted to elasticsearch
+                         if (s3Client == null ||
+                         (s3Client != null
+                         && s3Client.getObjectMetadata(bucket, key).getContentLength()
+                         > Integer.parseInt(System.getenv(ENV_ES_MAX_PAYLOAD_SIZE)))) {
+                         try {
+                         document = parseFile(document);
+                         } catch (Exception err) {
+                         throw new RuntimeException(err);
+                         }
+                         }**/
+                        try {
+                            document = parseFile(document);
+                        } catch (Exception err) {
+                            throw new RuntimeException(err);
+                        }
+                    } /** else {
+                        try {
+                            // Try to detect HTML?
+                            //      Attempt HTML extraction?
+                            document = parseHTMLContentString(document);
+                            // Try to detect JSON?
+                            //      Attempt JSON extraction?
+                        } catch (Exception err) {
+                            throw new RuntimeException(err);
+                        }
+                    } **/
+
+                    // Do some validation
+                    ValidatorFactory factory = Validation.buildDefaultValidatorFactory();
+                    Validator validator = factory.getValidator();
+                    Set<ConstraintViolation<Document>> violations = validator.validate(document);
+
+                    if (violations.size() > 0) {
+                        throw new RuntimeException(
+                                violations.stream()
+                                        .map(violation -> violation.getPropertyPath().toString() + ": " + violation.getMessage())
+                                        .collect(Collectors.joining("\n")));
+                    }
+
                     IndexRequest req = new IndexRequest(message.getIndex(), System.getenv(ENV_ES_DOCTYPE), document.getId());
                     req.source(jsonb.toJson(document), XContentType.JSON);
                     // If a pipeline is specified, use it
