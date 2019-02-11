@@ -91,7 +91,8 @@ public class Ingester implements RequestHandler<SQSEvent, Void> {
             Jsonb jsonb = JsonbBuilder.create();
             Message message = jsonb.fromJson(msg.getBody(), Message.class);
 
-            System.out.println(msg.getBody()); 
+            // uncomment to log the message body in cloudwatch
+            // System.out.println(msg.getBody()); 
 
             if (message.getS3BucketName() != null && message.getS3Key() != null) {
                 this.s3Client = getS3Client();
