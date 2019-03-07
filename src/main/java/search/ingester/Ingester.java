@@ -85,113 +85,118 @@ public class Ingester implements RequestHandler<SQSEvent, Void> {
      * @throws RuntimeException Throws a runtime exception in the case of any caught exceptions
      * @return Returns null if successful or throws a RuntimeException if something goes wrong
      */
-    public Void handleRequest(SQSEvent event, Context context)  {
+    public Void handleRequest(SQSEvent event, Context context) {
+
+        // unless the messages are "batched", we only expect one message,
+        // but use a loop anyway in case they are batched in the future
         for (SQSMessage msg : event.getRecords()) {
-            String bucket = "", key = "";
-            Jsonb jsonb = JsonbBuilder.create();
-            Message message = jsonb.fromJson(msg.getBody(), Message.class);
+            handleMessage(msg);
+        }
 
-            // uncomment to log the message body in cloudwatch
-            // System.out.println(msg.getBody()); 
+        // apparently you return null from an AWS Lambda handler on success?
+        return null;
+    }
 
-            if (message.getS3BucketName() != null && message.getS3Key() != null) {
-                this.s3Client = getS3Client();
-                bucket = message.getS3BucketName();
-                key = message.getS3Key();
+    private void handleMessage(SQSMessage sqsMessage) {
 
-                try {
-                    message = getMessageFromS3(bucket, key);
-                } catch (IOException ex) {
-                    throw new RuntimeException(ex);
-                }
-            }
+        // uncomment to log the message body in cloudwatch
+        // System.out.println(msg.getBody()); 
 
-            Document document = message.getDocument();
+        Message m = resolveMessageFromBodyOrFromS3(sqsMessage);
 
-            // Send index request
-            if (message.getVerb().equals(UPSERT)) {
-                try {
-                    if (document.getFileBase64() != null) {
-                        /** Something odd happening on some files being submitted to elasticsearch
-                         if (s3Client == null ||
-                         (s3Client != null
-                         && s3Client.getObjectMetadata(bucket, key).getContentLength()
-                         > Integer.parseInt(System.getenv(ENV_ES_MAX_PAYLOAD_SIZE)))) {
-                         try {
-                         document = parseFile(document);
-                         } catch (Exception err) {
-                         throw new RuntimeException(err);
-                         }
-                         }**/
-                        try {
-                            document = parseFile(document);
-                        } catch (Exception err) {
-                            throw new RuntimeException(err);
-                        }
-                    } /** else {
-                        try {
-                            // Try to detect HTML?
-                            //      Attempt HTML extraction?
-                            document = parseHTMLContentString(document);
-                            // Try to detect JSON?
-                            //      Attempt JSON extraction?
-                        } catch (Exception err) {
-                            throw new RuntimeException(err);
-                        }
-                    } **/
+        if (m.getVerb().equals(UPSERT)) {
+            performUpsert(m.getIndex(), m.getDocument());
+        } else if (m.getVerb().equals(DELETE)) {
+            performDelete(m.getIndex(), m.getDocument());
+        } else {
+            throw new RuntimeException(
+                String.format("Expected verb to be 'upsert' or 'delete' but got %s",
+                m.getVerb()));
+        }
 
-                    // Do some validation
-                    ValidatorFactory factory = Validation.buildDefaultValidatorFactory();
-                    Validator validator = factory.getValidator();
-                    Set<ConstraintViolation<Document>> violations = validator.validate(document);
+        // Cleanup if S3 message
+        if (this.s3Client != null) {
+            deleteMessageFromS3(m.getS3BucketName(), m.getS3Key());
+        }
+    }
 
-                    if (violations.size() > 0) {
-                        throw new RuntimeException(
-                                violations.stream()
-                                        .map(violation -> violation.getPropertyPath().toString() + ": " + violation.getMessage())
-                                        .collect(Collectors.joining("\n")));
-                    }
+    private Message resolveMessageFromBodyOrFromS3(SQSMessage msg) {
 
-                    IndexRequest req = new IndexRequest(message.getIndex(), System.getenv(ENV_ES_DOCTYPE), document.getId());
-                    req.source(jsonb.toJson(document), XContentType.JSON);
-                    // If a pipeline is specified, use it
-                    if (System.getenv(ENV_ES_PIPELINE) != null) {
-                        req.setPipeline(System.getenv(ENV_ES_PIPELINE));
-                    }
-                    IndexResponse resp = esClient().index(req, RequestOptions.DEFAULT);
-                    if (!(resp.getResult() == DocWriteResponse.Result.CREATED
-                            || resp.getResult() == DocWriteResponse.Result.UPDATED)) {
-                        throw new RuntimeException(
-                                String.format("Index Response return was not as expected got (%d) with the following " +
-                                        "returned %s", resp.status().getStatus(), resp.toString()));
-                    }
-                } catch (IOException ex) {
-                    throw new RuntimeException(ex);
-                }
-            } else if (message.getVerb().equals(DELETE)) {
-                DeleteRequest req = new DeleteRequest(message.getIndex(), System.getenv(ENV_ES_DOCTYPE), document.getId());
-                try {
-                    DeleteResponse resp = esClient().delete(req, RequestOptions.DEFAULT);
-                    if (resp.getResult() != DocWriteResponse.Result.DELETED) {
-                        throw new RuntimeException(
-                                String.format("Index Response return was not as expected got (%d) with the following " +
-                                        "returned %s", resp.status().getStatus(), resp.toString()));
-                    }
-                } catch(IOException ex) {
-                    throw new RuntimeException(ex);
-                }
+        // get a message instance from the JSON body of the SQS message 
+        Jsonb jsonb = JsonbBuilder.create();
+        Message original = jsonb.fromJson(msg.getBody(), Message.class);
 
-            } else {
-                throw new RuntimeException(String.format("Expected verb to be 'upsert' or 'delete' but got %s",
-                        message.getVerb()));
-            }
+        // the "real" message might be on S3 storage via the SQS Extended Client
+        // in which case it will have two properties pointing to the S3 object
+        boolean isMessageReallyOnS3 = original.getS3BucketName() != null && original.getS3Key() != null;
 
-            // Cleanup if S3 message
-            if (this.s3Client != null) {
-                deleteMessageFromS3(bucket, key);
+        if (isMessageReallyOnS3) {
+            this.s3Client = getS3Client();
+            try {
+                return getMessageFromS3(original.getS3BucketName(), original.getS3Key());
+            } catch (IOException ex) {
+                throw new RuntimeException(ex);
             }
         }
-        return null;
+        else {
+            return original;
+        }
+    }
+
+    private void performUpsert(String index, Document document) {
+        try {
+            if (document.getFileBase64() != null) {
+                try {
+                    document = parseFile(document);
+                } catch (Exception err) {
+                    throw new RuntimeException(err);
+                }
+            }
+
+            // Do some validation
+            ValidatorFactory factory = Validation.buildDefaultValidatorFactory();
+            Validator validator = factory.getValidator();
+            Set<ConstraintViolation<Document>> violations = validator.validate(document);
+
+            if (violations.size() > 0) {
+                throw new RuntimeException(
+                        violations.stream()
+                                .map(violation -> violation.getPropertyPath().toString() + ": " + violation.getMessage())
+                                .collect(Collectors.joining("\n")));
+            }
+
+            IndexRequest req = new IndexRequest(index, System.getenv(ENV_ES_DOCTYPE), document.getId());
+            Jsonb jsonb = JsonbBuilder.create();
+            req.source(jsonb.toJson(document), XContentType.JSON);
+            // pm: why is this an env var? surely this is fixed now?
+            // If a pipeline is specified, use it
+            if (System.getenv(ENV_ES_PIPELINE) != null) {
+                req.setPipeline(System.getenv(ENV_ES_PIPELINE));
+            }
+            IndexResponse resp = esClient().index(req, RequestOptions.DEFAULT);
+            if (!(resp.getResult() == DocWriteResponse.Result.CREATED
+                    || resp.getResult() == DocWriteResponse.Result.UPDATED)) {
+                throw new RuntimeException(
+                        String.format("Index Response return was not as expected got (%d) with the following " +
+                                "returned %s", resp.status().getStatus(), resp.toString()));
+            }
+        } catch (IOException ex) {
+            throw new RuntimeException(ex);
+        }
+    }
+
+    private void performDelete(String index, Document document) {
+        DeleteRequest req = new DeleteRequest(index, System.getenv(ENV_ES_DOCTYPE), document.getId());
+        try {
+            DeleteResponse resp = esClient().delete(req, RequestOptions.DEFAULT);
+            if (resp.getResult() != DocWriteResponse.Result.DELETED) {
+                throw new RuntimeException(
+                        String.format("Index Response return was not as expected got (%d) with the following " +
+                                "returned %s", resp.status().getStatus(), resp.toString()));
+            }
+        } catch(IOException ex) {
+            throw new RuntimeException(ex);
+        }    
     }
 
     /**
