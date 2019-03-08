@@ -127,7 +127,7 @@ public class Ingester implements RequestHandler<SQSEvent, Void> {
         Message original = jsonb.fromJson(msg.getBody(), Message.class);
 
         // the "real" message might be on S3 storage via the SQS Extended Client
-        // in which case it will have two properties pointing to the S3 object
+        // in which case we will have two properties pointing to the S3 object
         boolean isMessageReallyOnS3 = original.getS3BucketName() != null && original.getS3Key() != null;
 
         if (isMessageReallyOnS3) {

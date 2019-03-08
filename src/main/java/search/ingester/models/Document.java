@@ -14,17 +14,21 @@ import java.util.List;
 
 @NotBlankIfAnotherFieldIsBlank(fieldName="content", dependFieldName = "fileBase64")
 public class Document {
+    
     @NotBlank
     //@Pattern(regexp = "^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$", message = "ID must be a UUID")
     @JsonbProperty("id")
     private String id;
+
     @NotBlank
-    @Pattern(regexp = "datahub|website|mhc", flags = Pattern.Flag.CASE_INSENSITIVE, message = "Site must be datahub|website|mhc")
+    @Pattern(regexp = "datahub|website|mhc|sac", flags = Pattern.Flag.CASE_INSENSITIVE, message = "Site must be datahub|website|mhc|sac")
     @JsonbProperty("site")
     private String site;
+
     @NotBlank
     @JsonbProperty("title")
     private String title;
+
     @NotEmpty
     @JsonbProperty("keywords")
     private List<Keyword> keywords;
@@ -34,17 +38,21 @@ public class Document {
 
     @JsonbProperty("file_base64")
     private String fileBase64;
+
     @JsonbProperty("file_bytes")
     private Integer fileBytes;
+
     @JsonbProperty("file_extension")
     private String fileExtension;
 
     //@NotBlank
     @JsonbProperty("url")
     private String url;
+
     //@NotBlank
     @JsonbProperty(value = "data_type", nillable = true)
     private String dataType;
+
     @NotNull
     @Pattern(regexp = "^([\\+-]?\\d{4}(?!\\d{2}\\b))((-?)((0[1-9]|1[0-2])(\\3([12]\\d|0[1-9]|3[01]))?|W([0-4]\\d|5[0-2])(-?[1-7])?|(00[1-9]|0[1-9]\\d|[12]\\d{2}|3([0-5]\\d|6[1-6])))([T\\s]((([01]\\d|2[0-3])((:?)[0-5]\\d)?|24\\:?00)([\\.,]\\d+(?!:))?)?(\\17[0-5]\\d([\\.,]\\d+)?)?([zZ]|([\\+-])([01]\\d|2[0-3]):?([0-5]\\d)?)?)?)?$", message = "Must be an ISO 8601 date")
     @JsonbProperty("published_date")
@@ -53,6 +61,7 @@ public class Document {
     @Pattern(regexp = "^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$", message = "ID must be a UUID")
     @JsonbProperty("parent_id")
     private String parentId;
+
     @JsonbProperty("parent_title")
     private String parentTitle;
 
