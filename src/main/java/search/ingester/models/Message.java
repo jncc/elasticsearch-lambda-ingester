@@ -1,5 +1,6 @@
 package search.ingester.models;
 
+import java.util.List;
 import javax.json.bind.annotation.JsonbProperty;
 
 public class Message {
@@ -19,6 +20,9 @@ public class Message {
     @JsonbProperty("document")
     private Document document;
 
+    @JsonbProperty("resources")
+    private List<Document> resources;
+
     public String getIndex() { return index; }
     public void setIndex(String index) { this.index = index; }
 
@@ -27,6 +31,9 @@ public class Message {
 
     public Document getDocument() { return document; }
     public void setDocument(Document document) { this.document = document; }
+
+    public List<Document> getResources() { return resources; }
+    public void setResources(List<Document> resources) { this.resources = resources; }
 
     public String getS3BucketName() { return s3BucketName; }
     public void setS3BucketName(String s3BucketName) { this.s3BucketName = s3BucketName; }
