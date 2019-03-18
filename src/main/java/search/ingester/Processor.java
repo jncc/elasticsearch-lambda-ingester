@@ -24,15 +24,15 @@ public class Processor {
     public void process(Message m) throws IOException {
 
         switch (m.getVerb()) {
-            case "upsert": processUpsertMessage(m); break;
-            case "delete": processDeleteMessage(m); break;
-            case "spike":  processSpikeMessage(m);  break;
+            case "upsert": processUpsert(m); break;
+            case "delete": processDelete(m); break;
+            case "spike":  processSpike(m);  break;
             default: throw new RuntimeException(
                 String.format("Expected verb to be 'upsert' or 'delete' but got %s", m.getVerb()));
         }        
     }
 
-    void processUpsertMessage(Message m) throws IOException {
+    void processUpsert(Message m) throws IOException {
         
         // todo:
         // 1. delete existing resources
@@ -41,8 +41,11 @@ public class Processor {
 
         Document document = m.getDocument();
 
+        // if this doc represents a "file" (e.g. a PDF) then it will have a file_base64 field
+        // which we need to extract into the content field etc.
         if (document.getFileBase64() != null) {
             try {
+                // note this function mutates its argument (and returns it for good measure!)
                 document = fileParser.parseFile(document);
             } catch (Exception err) {
                 throw new RuntimeException(err);
@@ -64,7 +67,7 @@ public class Processor {
         elasticService.putDocument(m.getIndex(), document);
     }
 
-    void processDeleteMessage(Message m) throws IOException {
+    void processDelete(Message m) throws IOException {
 
         String index = m.getIndex();
         String docId = m.getDocument().getId();
@@ -74,11 +77,11 @@ public class Processor {
         elasticService.deleteDocument(index, docId);
     }
 
-    void processSpikeMessage(Message m) throws IOException {
+    void processSpike(Message m) throws IOException {
 
         String index = m.getIndex();
-        String docId = m.getDocument().getId();
+        String parentId = m.getDocument().getId();
 
-        // todo deleteResources(index, docId);
+        elasticService.deleteByParentId(index, parentId);
     }
 }

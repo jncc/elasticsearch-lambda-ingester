@@ -56,11 +56,11 @@ public class Ingester implements RequestHandler<SQSEvent, Void> {
         return null;
     }
 
-    void handleMessage(Message original, Processor ingester) throws IOException {
+    void handleMessage(Message original, Processor processor) throws IOException {
 
         Message m = resolveMessagePossiblyFromS3(original);
 
-        ingester.process(m);
+        processor.process(m);
 
         if (this.s3Client != null) {
             deleteObjectFromS3(m.getS3BucketName(), m.getS3Key());
