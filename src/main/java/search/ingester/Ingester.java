@@ -58,28 +58,25 @@ public class Ingester implements RequestHandler<SQSEvent, Void> {
 
     void handleMessage(Message original, Processor processor) throws IOException {
 
-        Message m = resolveMessagePossiblyFromS3(original);
-
-        processor.process(m);
-
-        if (this.s3Client != null) {
-            deleteObjectFromS3(m.getS3BucketName(), m.getS3Key());
-        }
-    }
-
-    private Message resolveMessagePossiblyFromS3(Message original) throws IOException {
-
         // the "real" message might be on S3 storage via the SQS Extended Client
         // in which case we will have two properties pointing to the S3 object
         boolean isMessageReallyOnS3 = original.getS3BucketName() != null && original.getS3Key() != null;
 
+        Message m;
+
         if (isMessageReallyOnS3) {
             this.s3Client = getS3Client();
-            return getMessageFromS3(original.getS3BucketName(), original.getS3Key());
+            m = getMessageFromS3(original.getS3BucketName(), original.getS3Key());
         }
         else {
-            return original;
+            m = original;
         }
+
+        processor.process(m);
+
+        if (isMessageReallyOnS3) {
+            deleteObjectFromS3(original.getS3BucketName(), original.getS3Key());
+        }    
     }
 
     /**
