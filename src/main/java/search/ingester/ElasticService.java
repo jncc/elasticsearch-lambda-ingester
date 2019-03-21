@@ -34,14 +34,10 @@ public class ElasticService {
 
         IndexRequest req = new IndexRequest(index, env.ES_DOCTYPE(), doc.getId());
 
+        DocumentTransformer.setContentTruncated(doc);
+
         Jsonb jsonb = JsonbBuilder.create();
         req.source(jsonb.toJson(doc), XContentType.JSON);
-
-        // pm: why is this an env var? surely this is fixed now?
-        // If a pipeline is specified, use it
-        if (System.getenv(env.ES_PIPELINE()) != null) {
-            req.setPipeline(env.ES_PIPELINE());
-        }
 
         IndexResponse resp = esClient().index(req, RequestOptions.DEFAULT);
 
