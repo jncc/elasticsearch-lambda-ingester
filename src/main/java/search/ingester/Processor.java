@@ -64,6 +64,8 @@ public class Processor {
                             .collect(Collectors.joining("\n")));
         }
 
+        DocumentTweaker.tweak(document);
+
         elasticService.putDocument(m.getIndex(), document);
     }
 

@@ -34,8 +34,6 @@ public class ElasticService {
 
         IndexRequest req = new IndexRequest(index, env.ES_DOCTYPE(), doc.getId());
 
-        DocumentTransformer.setContentTruncated(doc);
-
         Jsonb jsonb = JsonbBuilder.create();
         req.source(jsonb.toJson(doc), XContentType.JSON);
 
