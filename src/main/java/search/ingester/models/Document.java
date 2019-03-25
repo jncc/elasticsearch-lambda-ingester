@@ -52,9 +52,10 @@ public class Document {
     @JsonbProperty("url")
     private String url;
 
-    //@NotBlank
-    @JsonbProperty(value = "data_type", nillable = true)
-    private String dataType;
+    // todo: what was this?
+    // //@NotBlank
+    // @JsonbProperty(value = "data_type", nillable = true)
+    // private String dataType;
 
     @NotNull
     @Pattern(regexp = "^([\\+-]?\\d{4}(?!\\d{2}\\b))((-?)((0[1-9]|1[0-2])(\\3([12]\\d|0[1-9]|3[01]))?|W([0-4]\\d|5[0-2])(-?[1-7])?|(00[1-9]|0[1-9]\\d|[12]\\d{2}|3([0-5]\\d|6[1-6])))([T\\s]((([01]\\d|2[0-3])((:?)[0-5]\\d)?|24\\:?00)([\\.,]\\d+(?!:))?)?(\\17[0-5]\\d([\\.,]\\d+)?)?([zZ]|([\\+-])([01]\\d|2[0-3]):?([0-5]\\d)?)?)?)?$", message = "Must be an ISO 8601 date")
@@ -67,6 +68,9 @@ public class Document {
 
     @JsonbProperty("parent_title")
     private String parentTitle;
+
+    @JsonbProperty("resources")
+    private List<Document> resources;
 
     public String getId() { return id; }
     public void setId(String id) { this.id = id; }
@@ -98,9 +102,6 @@ public class Document {
     public String getUrl() { return url; }
     public void setUrl(String url) { this.url = url; }
 
-    public String getDataType() { return dataType; }
-    public void setDataType(String dataType) { this.dataType = dataType; }
-
     public String getPublishedDate() { return publishedDate; }
     public void setPublishedDate(String publishedDate) { this.publishedDate = publishedDate; }
 
@@ -109,6 +110,9 @@ public class Document {
 
     public String getParentTitle() { return parentTitle; }
     public void setParentTitle(String parentTitle) { this.parentTitle = parentTitle; }
+
+    public List<Document> getResources() { return resources; }
+    public void setResources(List<Document> resources) { this.resources = resources; }
 
     public ImmutablePair<Boolean, String> nonAnnotationValidation() {
         if (StringUtils.isBlank(fileBase64) && StringUtils.isBlank(content)) {

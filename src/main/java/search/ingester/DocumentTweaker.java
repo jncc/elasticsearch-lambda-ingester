@@ -3,13 +3,6 @@ package search.ingester;
 import search.ingester.models.Document;
 
 public class DocumentTweaker {
-
-    public static void tweak(Document doc) {
-
-        setContentTruncatedField(doc);
-
-        // possibly other tweaks...
-    }
     
     static void setContentTruncatedField(Document doc) {
         

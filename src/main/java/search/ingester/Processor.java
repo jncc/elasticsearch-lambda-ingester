@@ -2,6 +2,7 @@ package search.ingester;
 
 import java.io.IOException;
 import java.util.Set;
+import java.util.UUID;
 import java.util.stream.Collectors;
 import javax.validation.ConstraintViolation;
 import javax.validation.Validation;
@@ -34,56 +35,80 @@ public class Processor {
 
     void processUpsert(Message m) throws IOException {
         
-        // todo:
-        // 1. delete existing resources
-        // 3. put asset
-        // 2. put resources
+        Document doc = m.getDocument();
 
-        Document document = m.getDocument();
+        deleteDatahubResourcesIfNecessary(m.getIndex(), doc);
+        extractContentFromFileBase64IfNecessary(doc);        
+        validateDocument(doc);
+        DocumentTweaker.setContentTruncatedField(doc);
+        elasticService.putDocument(m.getIndex(), doc);
+        upsertDatahubResourcesIfAny(m.getIndex(), doc);
+    }
+    
+    void deleteDatahubResourcesIfNecessary(String index, Document doc) throws IOException {
 
+        // if this is a datahub doc, delete any existing resources
+        if (doc.getSite() == "datahub") {
+            elasticService.deleteByParentId(index, doc.getParentId());
+        }
+    }
+
+    void extractContentFromFileBase64IfNecessary(Document doc) {
+        
         // if this doc represents a "file" (e.g. a PDF) then it will have a file_base64 field
         // which we need to extract into the content field etc.
-        if (document.getFileBase64() != null) {
+        if (doc.getFileBase64() != null) {
             try {
                 // note this function mutates its argument (and returns it for good measure!)
-                document = fileParser.parseFile(document);
+                doc = fileParser.parseFile(doc);
             } catch (Exception err) {
                 throw new RuntimeException(err);
             }
         }
+    }
 
-        // Do some validation
+    void validateDocument(Document doc) {
+
         ValidatorFactory factory = Validation.buildDefaultValidatorFactory();
         Validator validator = factory.getValidator();
-        Set<ConstraintViolation<Document>> violations = validator.validate(document);
-
+        Set<ConstraintViolation<Document>> violations = validator.validate(doc);
+    
         if (violations.size() > 0) {
             throw new RuntimeException(
                     violations.stream()
                             .map(violation -> violation.getPropertyPath().toString() + ": " + violation.getMessage())
                             .collect(Collectors.joining("\n")));
         }
+    }
 
-        DocumentTweaker.tweak(document);
+    void upsertDatahubResourcesIfAny(String index, Document doc) {
 
-        elasticService.putDocument(m.getIndex(), document);
+        // if this is a datahub doc, upsert any existing resources
+        if (doc.getSite() == "datahub") {
+            System.out.println("::upserting " + doc.getResources().size() + " resources:: ");
+            for (Document resource : doc.getResources()) {
+                // todo ...construct a stable ID from the docId and the title
+                resource.setId(UUID.randomUUID().toString());
+                resource.setUrl(UUID.randomUUID().toString());
+                
+                // set the parent information
+                resource.setParentId(doc.getId());
+                resource.setParentTitle(doc.getTitle());
+            }
+        }
     }
 
     void processDelete(Message m) throws IOException {
 
         String index = m.getIndex();
-        String docId = m.getDocument().getId();
+        Document doc = m.getDocument();
 
-        // delete any child resources and the document itself
-        //todo deleteResources(index, docId);
-        elasticService.deleteDocument(index, docId);
+        // delete any child resources, and the document itself
+        deleteDatahubResourcesIfNecessary(index, m.getDocument());
+        elasticService.deleteDocument(index, doc.getId());
     }
 
     void processSpike(Message m) throws IOException {
-
-        String index = m.getIndex();
-        String parentId = m.getDocument().getId();
-
-        elasticService.deleteByParentId(index, parentId);
+        // temporary method for testing on AWS Lambda...
     }
 }
