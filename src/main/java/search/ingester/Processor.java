@@ -37,7 +37,7 @@ public class Processor {
         
         Document doc = m.getDocument();
 
-        System.out.println(":: Processing doc " + doc.getId() + " ::");
+        System.out.println(":: Upserting doc " + doc.getId() + " for site " + doc.getSite() + " in index " + m.getIndex() + " ::");
 
         deleteDatahubResourcesIfNecessary(m.getIndex(), doc);
         extractContentFromFileBase64IfNecessary(doc);        
@@ -87,7 +87,7 @@ public class Processor {
 
         // if this is a datahub doc, upsert any existing resources
         if (doc.getSite() == "datahub") {
-            System.out.println("::upserting " + doc.getResources().size() + " resources:: ");
+            System.out.println(":: Upserting " + doc.getResources().size() + " resources :: ");
             for (Document resource : doc.getResources()) {
                 // todo ...construct a stable ID from the docId and the title
                 resource.setId(UUID.randomUUID().toString());
@@ -104,6 +104,8 @@ public class Processor {
 
         String index = m.getIndex();
         Document doc = m.getDocument();
+
+        System.out.println(":: Deleting doc " + doc.getId() + " for site " + doc.getSite() + " in index " + m.getIndex() + " ::");
 
         // delete any child resources, and the document itself
         deleteDatahubResourcesIfNecessary(index, m.getDocument());
