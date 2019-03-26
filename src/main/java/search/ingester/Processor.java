@@ -37,6 +37,8 @@ public class Processor {
         
         Document doc = m.getDocument();
 
+        System.out.println(":: Processing doc " + doc.getId() + " ::");
+
         deleteDatahubResourcesIfNecessary(m.getIndex(), doc);
         extractContentFromFileBase64IfNecessary(doc);        
         validateDocument(doc);
