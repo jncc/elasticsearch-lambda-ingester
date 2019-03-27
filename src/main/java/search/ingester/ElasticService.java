@@ -65,8 +65,6 @@ public class ElasticService {
         req.setQuery(QueryBuilders.matchQuery("parent_id", parentDocId));
 
         BulkByScrollResponse res = esClient().deleteByQuery(req, RequestOptions.DEFAULT);
-        
-        System.out.println("::Deleted " + res.getStatus().getTotal() + " resources.::"); 
     }
 
     /**

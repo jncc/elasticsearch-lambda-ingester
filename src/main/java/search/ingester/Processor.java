@@ -1,6 +1,7 @@
 package search.ingester;
 
 import java.io.IOException;
+import java.util.List;
 import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
@@ -44,14 +45,14 @@ public class Processor {
         validateDocument(doc);
         DocumentTweaker.setContentTruncatedField(doc);
         elasticService.putDocument(m.getIndex(), doc);
-        upsertDatahubResourcesIfAny(m.getIndex(), doc);
+        upsertDatahubResourcesIfAny(m.getIndex(), doc, m.getResources());
     }
     
     void deleteDatahubResourcesIfNecessary(String index, Document doc) throws IOException {
 
         // if this is a datahub doc, delete any existing resources
-        if (doc.getSite() == "datahub") {
-            elasticService.deleteByParentId(index, doc.getParentId());
+        if (doc.getSite().equals("datahub")) {
+            elasticService.deleteByParentId(index, doc.getId());
         }
     }
 
@@ -83,19 +84,26 @@ public class Processor {
         }
     }
 
-    void upsertDatahubResourcesIfAny(String index, Document doc) {
+    void upsertDatahubResourcesIfAny(String index, Document doc, List<Document> resources) throws IOException {
 
-        // if this is a datahub doc, upsert any existing resources
-        if (doc.getSite() == "datahub") {
-            System.out.println(":: Upserting " + doc.getResources().size() + " resources :: ");
-            for (Document resource : doc.getResources()) {
+        // upsert any additional resources if this is a datahub doc
+        if (resources != null && doc.getSite().equals("datahub")) {
+            
+            System.out.println(":: Upserting " + resources.size() + " resources :: ");
+            for (Document r : resources) {
+                    
                 // todo ...construct a stable ID from the docId and the title
-                resource.setId(UUID.randomUUID().toString());
-                resource.setUrl(UUID.randomUUID().toString());
+                r.setId(UUID.randomUUID().toString());
+                r.setUrl(UUID.randomUUID().toString());
                 
+                // ensure the site it set
+
+                r.setSite(doc.getSite());
                 // set the parent information
-                resource.setParentId(doc.getId());
-                resource.setParentTitle(doc.getTitle());
+                r.setParentId(doc.getId());
+                r.setParentTitle(doc.getTitle());
+
+                elasticService.putDocument(index, r);
             }
         }
     }

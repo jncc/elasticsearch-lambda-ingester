@@ -69,9 +69,6 @@ public class Document {
     @JsonbProperty("parent_title")
     private String parentTitle;
 
-    @JsonbProperty("resources")
-    private List<Document> resources;
-
     public String getId() { return id; }
     public void setId(String id) { this.id = id; }
 
@@ -110,9 +107,6 @@ public class Document {
 
     public String getParentTitle() { return parentTitle; }
     public void setParentTitle(String parentTitle) { this.parentTitle = parentTitle; }
-
-    public List<Document> getResources() { return resources; }
-    public void setResources(List<Document> resources) { this.resources = resources; }
 
     public ImmutablePair<Boolean, String> nonAnnotationValidation() {
         if (StringUtils.isBlank(fileBase64) && StringUtils.isBlank(content)) {
