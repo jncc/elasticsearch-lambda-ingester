@@ -88,17 +88,16 @@ public class Processor {
 
         // upsert any additional resources if this is a datahub doc
         if (resources != null && doc.getSite().equals("datahub")) {
-            
+
             System.out.println(":: Upserting " + resources.size() + " resources :: ");
             for (Document r : resources) {
                     
                 // todo ...construct a stable ID from the docId and the title
                 r.setId(UUID.randomUUID().toString());
-                r.setUrl(UUID.randomUUID().toString());
                 
                 // ensure the site it set
-
                 r.setSite(doc.getSite());
+
                 // set the parent information
                 r.setParentId(doc.getId());
                 r.setParentTitle(doc.getTitle());
