@@ -37,7 +37,8 @@ public class Ingester implements RequestHandler<SQSEvent, Void> {
         for (SQSMessage msg : event.getRecords()) {
             
             // uncomment to log the message body in cloudwatch
-            // System.out.println(msg.getBody());
+            System.out.println(":: Message received :: ");
+            System.out.println(msg.getBody());
 
             // deserialize a Message from the JSON body of the SQS message 
             Jsonb jsonb = JsonbBuilder.create();
