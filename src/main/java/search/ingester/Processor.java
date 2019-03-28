@@ -90,17 +90,25 @@ public class Processor {
         if (resources != null && doc.getSite().equals("datahub")) {
 
             System.out.println(":: Upserting " + resources.size() + " resources :: ");
+
             for (Document r : resources) {
                     
-                // todo ...construct a stable ID from the docId and the title
-                r.setId(UUID.randomUUID().toString());
-                
-                // ensure the site it set
+                // elasticsearch needs an ID but an ID of a "resource" is never really surfaced
+                r.setId(UUID.randomUUID().toString());                
+
+                // ensure the site it set (it might not have been in the incoming message)
                 r.setSite(doc.getSite());
 
                 // set the parent information
                 r.setParentId(doc.getId());
                 r.setParentTitle(doc.getTitle());
+                r.setParentResourceType(doc.getResourceType());
+
+                // todo: validation? we can't really use the existing Document property validation annotations
+
+                // do the usual transformations we do to a normal document 
+                extractContentFromFileBase64IfNecessary(doc);
+                DocumentTweaker.setContentTruncatedField(doc);
 
                 elasticService.putDocument(index, r);
             }

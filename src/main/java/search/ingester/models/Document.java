@@ -39,6 +39,9 @@ public class Document {
     @JsonbProperty("content_truncated")
     private String contentTruncated;
 
+    @JsonbProperty("resource_type")
+    private String resourceType;
+
     @JsonbProperty("file_base64")
     private String fileBase64;
 
@@ -52,11 +55,6 @@ public class Document {
     @JsonbProperty("url")
     private String url;
 
-    // todo: what was this?
-    // //@NotBlank
-    // @JsonbProperty(value = "data_type", nillable = true)
-    // private String dataType;
-
     @NotNull
     @Pattern(regexp = "^([\\+-]?\\d{4}(?!\\d{2}\\b))((-?)((0[1-9]|1[0-2])(\\3([12]\\d|0[1-9]|3[01]))?|W([0-4]\\d|5[0-2])(-?[1-7])?|(00[1-9]|0[1-9]\\d|[12]\\d{2}|3([0-5]\\d|6[1-6])))([T\\s]((([01]\\d|2[0-3])((:?)[0-5]\\d)?|24\\:?00)([\\.,]\\d+(?!:))?)?(\\17[0-5]\\d([\\.,]\\d+)?)?([zZ]|([\\+-])([01]\\d|2[0-3]):?([0-5]\\d)?)?)?)?$", message = "Must be an ISO 8601 date")
     @JsonbProperty("published_date")
@@ -68,6 +66,9 @@ public class Document {
 
     @JsonbProperty("parent_title")
     private String parentTitle;
+
+    @JsonbProperty("parent_resource_type")
+    private String parentResourceType;
 
     public String getId() { return id; }
     public void setId(String id) { this.id = id; }
@@ -86,6 +87,9 @@ public class Document {
 
     public String getContentTruncated() { return contentTruncated; }
     public void setContentTruncated(String contentTruncated) { this.contentTruncated = contentTruncated; }
+
+    public String getResourceType() { return resourceType; }
+    public void setResourceType(String resourceType) { this.resourceType = resourceType; }
 
     public String getFileBase64() { return fileBase64; }
     public void setFileBase64(String fileBase64) { this.fileBase64 = fileBase64; }
@@ -107,6 +111,9 @@ public class Document {
 
     public String getParentTitle() { return parentTitle; }
     public void setParentTitle(String parentTitle) { this.parentTitle = parentTitle; }
+
+    public String getParentResourceType() { return parentResourceType; }
+    public void setParentResourceType(String parentResourceType) { this.parentResourceType = parentResourceType; }
 
     public ImmutablePair<Boolean, String> nonAnnotationValidation() {
         if (StringUtils.isBlank(fileBase64) && StringUtils.isBlank(content)) {
