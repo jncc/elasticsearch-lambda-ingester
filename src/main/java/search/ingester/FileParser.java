@@ -26,7 +26,7 @@ public class FileParser {
      * @throws SAXException Thrown as part of the Tika package parsing the given document
      * @throws TikaException Thrown as part of the Tika package parsing the given document
      */
-    Document parseFile(Document document) throws IOException, SAXException, TikaException {
+    public Document parseFile(Document document) throws IOException, SAXException, TikaException {
 
         // Create auto document parser and try to extract some textual info from the base64 encoded string passed to it
         BodyContentHandler handler = new BodyContentHandler(TIKA_MAX_CHARACTER_LIMIT);
@@ -62,9 +62,16 @@ public class FileParser {
         return document;
     }
 
-    // doesn't appear to be used - perhaps this was exploratory code
-    
-    private Document parseHTMLContentString(Document document) throws IOException, SAXException, TikaException {
+    /**
+     * Not currently used, designed to handle html content
+     * 
+     * @param document
+     * @return
+     * @throws IOException
+     * @throws SAXException
+     * @throws TikaException
+     */    
+    public Document parseHTMLContentString(Document document) throws IOException, SAXException, TikaException {
         BodyContentHandler handler = new BodyContentHandler(TIKA_MAX_CHARACTER_LIMIT);
         HtmlParser parser = new HtmlParser();
         Metadata metadata = new Metadata();

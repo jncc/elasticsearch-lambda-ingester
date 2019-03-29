@@ -25,9 +25,11 @@ import search.ingester.models.Document;
 public class ElasticService {
 
     private Env env;
+    public RestHighLevelClient esClient;
 
     public ElasticService(Env env) {
         this.env = env;
+        this.esClient = esClient();
     }
 
     public void putDocument(String index, Document doc) throws IOException {
@@ -37,7 +39,7 @@ public class ElasticService {
         Jsonb jsonb = JsonbBuilder.create();
         req.source(jsonb.toJson(doc), XContentType.JSON);
 
-        IndexResponse resp = esClient().index(req, RequestOptions.DEFAULT);
+        IndexResponse resp = this.esClient.index(req, RequestOptions.DEFAULT);
 
         if (!(resp.getResult() == DocWriteResponse.Result.CREATED
                 || resp.getResult() == DocWriteResponse.Result.UPDATED)) {
@@ -47,10 +49,10 @@ public class ElasticService {
         }
     }
 
-    void deleteDocument(String index, String docId) throws IOException {
+    public void deleteDocument(String index, String docId) throws IOException {
 
         DeleteRequest request = new DeleteRequest(index, env.ES_DOCTYPE(), docId);
-        DeleteResponse response = esClient().delete(request, RequestOptions.DEFAULT);
+        DeleteResponse response = this.esClient.delete(request, RequestOptions.DEFAULT);
 
         if (response.getResult() != DocWriteResponse.Result.DELETED) {
             throw new RuntimeException(
@@ -59,17 +61,21 @@ public class ElasticService {
         }
     }    
 
-    void deleteByParentId(String index, String parentDocId) throws IOException {
+    public void deleteByParentId(String index, String parentDocId) throws IOException {
 
         DeleteByQueryRequest req = new DeleteByQueryRequest(index);
         req.setQuery(QueryBuilders.matchQuery("parent_id", parentDocId));
 
-        BulkByScrollResponse res = esClient().deleteByQuery(req, RequestOptions.DEFAULT);
+        BulkByScrollResponse res = this.esClient.deleteByQuery(req, RequestOptions.DEFAULT);
+
+        // TODO: Need to check the response of this
     }
 
     /**
      * Create configured a High Level Elasticsearch REST client with an AWS http interceptor to sign the data package
      * being sent
+     * 
+     * TODO: This should probably be created in the constructor as a singleton
      *
      * @return A Configured High Level Elasticsearch REST client to send packets to an AWS ES service
      */
