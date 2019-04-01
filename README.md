@@ -19,7 +19,7 @@ in the target folder;
 
 ## Deployment
 
-- Bump the version in the `pom.xml` `project/version` node.
+- Bump the version in the `pom.xml` (the `project/version` node)
 - Build `mvn package shade:shade`
 - Upload the `.jar` in the `target` dir (not the `original...` one!) to the JNCC Deployment Artefacts bucket in the search-ingester "folder"
 - Copy the path of the new `.jar` in the S3 console (by selecting it)

@@ -14,38 +14,48 @@ import java.util.List;
 
 @NotBlankIfAnotherFieldIsBlank(fieldName="content", dependFieldName = "fileBase64")
 public class Document {
+    
     @NotBlank
-    //@Pattern(regexp = "^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$", message = "ID must be a UUID")
     @JsonbProperty("id")
     private String id;
+
     @NotBlank
-    @Pattern(regexp = "datahub|website|mhc", flags = Pattern.Flag.CASE_INSENSITIVE, message = "Site must be datahub|website|mhc")
+    @Pattern(regexp = "datahub|website|mhc|sac", flags = Pattern.Flag.CASE_INSENSITIVE, message = "Site must be datahub|website|mhc|sac")
     @JsonbProperty("site")
     private String site;
+
     @NotBlank
     @JsonbProperty("title")
     private String title;
+
     @NotEmpty
     @JsonbProperty("keywords")
     private List<Keyword> keywords;
 
+    @NotBlank
     @JsonbProperty("content")
     private String content;
 
+    @NotBlank
+    @JsonbProperty("content_truncated")
+    private String contentTruncated;
+    
+    @JsonbProperty("resource_type")
+    private String resourceType;
+
     @JsonbProperty("file_base64")
     private String fileBase64;
+
     @JsonbProperty("file_bytes")
     private Integer fileBytes;
+
     @JsonbProperty("file_extension")
     private String fileExtension;
 
-    //@NotBlank
+    @NotBlank
     @JsonbProperty("url")
     private String url;
-    //@NotBlank
-    @JsonbProperty(value = "data_type", nillable = true)
-    private String dataType;
-    @NotNull
+
     @Pattern(regexp = "^([\\+-]?\\d{4}(?!\\d{2}\\b))((-?)((0[1-9]|1[0-2])(\\3([12]\\d|0[1-9]|3[01]))?|W([0-4]\\d|5[0-2])(-?[1-7])?|(00[1-9]|0[1-9]\\d|[12]\\d{2}|3([0-5]\\d|6[1-6])))([T\\s]((([01]\\d|2[0-3])((:?)[0-5]\\d)?|24\\:?00)([\\.,]\\d+(?!:))?)?(\\17[0-5]\\d([\\.,]\\d+)?)?([zZ]|([\\+-])([01]\\d|2[0-3]):?([0-5]\\d)?)?)?)?$", message = "Must be an ISO 8601 date")
     @JsonbProperty("published_date")
     private String publishedDate;
@@ -53,71 +63,57 @@ public class Document {
     @Pattern(regexp = "^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$", message = "ID must be a UUID")
     @JsonbProperty("parent_id")
     private String parentId;
+
     @JsonbProperty("parent_title")
     private String parentTitle;
 
-    public String getId() {
-        return id;
-    }
-    public void setId(String id) {
-        this.id = id;
-    }
-    public String getSite() {
-        return site;
-    }
-    public void setSite(String site) {
-        this.site = site;
-    }
-    public String getTitle() {
-        return title;
-    }
-    public void setTitle(String title) {
-        this.title = title;
-    }
-    public List<Keyword> getKeywords() {
-        return keywords;
-    }
-    public void setKeywords(List<Keyword> keywords) {
-        this.keywords = keywords;
-    }
-    public String getContent() {
-        return content;
-    }
-    public void setContent(String content) {
-        this.content = content;
-    }
-    public String getFileBase64() {
-        return fileBase64;
-    }
-    public void setFileBase64(String fileBase64) {
-        this.fileBase64 = fileBase64;
-    }
+    @JsonbProperty("parent_resource_type")
+    private String parentResourceType;
+
+    public String getId() { return id; }
+    public void setId(String id) { this.id = id; }
+
+    public String getSite() { return site; }
+    public void setSite(String site) { this.site = site; }
+
+    public String getTitle() { return title; }
+    public void setTitle(String title) { this.title = title; }
+
+    public List<Keyword> getKeywords() { return keywords;}
+    public void setKeywords(List<Keyword> keywords) { this.keywords = keywords; }
+
+    public String getContent() { return content; }
+    public void setContent(String content) { this.content = content; }
+
+    public String getContentTruncated() { return contentTruncated; }
+    public void setContentTruncated(String contentTruncated) { this.contentTruncated = contentTruncated; }
+
+    public String getResourceType() { return resourceType; }
+    public void setResourceType(String resourceType) { this.resourceType = resourceType; }
+
+    public String getFileBase64() { return fileBase64; }
+    public void setFileBase64(String fileBase64) { this.fileBase64 = fileBase64; }
+
     public Integer getFileBytes() { return fileBytes; }
     public void setFileBytes(Integer fileBytes) { this.fileBytes = fileBytes; }
+
     public String getFileExtension() { return fileExtension; }
     public void setFileExtension(String fileExtension) { this.fileExtension = fileExtension; }
-    public String getUrl() {
-        return url;
-    }
-    public void setUrl(String url) {
-        this.url = url;
-    }
-    public String getDataType() {
-        return dataType;
-    }
-    public void setDataType(String dataType) {
-        this.dataType = dataType;
-    }
-    public String getPublishedDate() {
-        return publishedDate;
-    }
-    public void setPublishedDate(String publishedDate) {
-        this.publishedDate = publishedDate;
-    }
+
+    public String getUrl() { return url; }
+    public void setUrl(String url) { this.url = url; }
+
+    public String getPublishedDate() { return publishedDate; }
+    public void setPublishedDate(String publishedDate) { this.publishedDate = publishedDate; }
+
     public String getParentId() { return parentId; }
     public void setParentId(String parentId) { this.parentId = parentId; }
+
     public String getParentTitle() { return parentTitle; }
     public void setParentTitle(String parentTitle) { this.parentTitle = parentTitle; }
+
+    public String getParentResourceType() { return parentResourceType; }
+    public void setParentResourceType(String parentResourceType) { this.parentResourceType = parentResourceType; }
 
     public ImmutablePair<Boolean, String> nonAnnotationValidation() {
         if (StringUtils.isBlank(fileBase64) && StringUtils.isBlank(content)) {
