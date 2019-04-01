@@ -112,21 +112,7 @@ public class Processor {
                 // grab some generic info from the parent that should just be copied to the resources
                 // i.e. keywords, published date
                 doc.setKeywords(parent.getKeywords());
-                doc.setPublishedDate(parent.getPublishedDate());
                 
-                // if the content is blank (shouldn't happen, copy from parent)
-                if (doc.getContent() == null || doc.getContent().isEmpty()) {
-                    doc.setContent(parent.getContent());
-                }
-
-                // set the resource type to the file extension if it exists, set it to other if not
-                // TODO: decide if `other` is the correct call here
-                if (doc.getFileExtension() != null && !doc.getFileExtension().isEmpty()) {
-                    doc.setResourceType(doc.getFileExtension());
-                } else {
-                    doc.setResourceType("other");
-                }
-
                 prepareDocument(doc);
 
                 outputs.add(doc);

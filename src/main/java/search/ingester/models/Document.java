@@ -16,7 +16,6 @@ import java.util.List;
 public class Document {
     
     @NotBlank
-    //@Pattern(regexp = "^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$", message = "ID must be a UUID")
     @JsonbProperty("id")
     private String id;
 
@@ -33,12 +32,14 @@ public class Document {
     @JsonbProperty("keywords")
     private List<Keyword> keywords;
 
+    @NotBlank
     @JsonbProperty("content")
     private String content;
 
+    @NotBlank
     @JsonbProperty("content_truncated")
     private String contentTruncated;
-
+    
     @JsonbProperty("resource_type")
     private String resourceType;
 
@@ -51,11 +52,10 @@ public class Document {
     @JsonbProperty("file_extension")
     private String fileExtension;
 
-    //@NotBlank
+    @NotBlank
     @JsonbProperty("url")
     private String url;
 
-    @NotNull
     @Pattern(regexp = "^([\\+-]?\\d{4}(?!\\d{2}\\b))((-?)((0[1-9]|1[0-2])(\\3([12]\\d|0[1-9]|3[01]))?|W([0-4]\\d|5[0-2])(-?[1-7])?|(00[1-9]|0[1-9]\\d|[12]\\d{2}|3([0-5]\\d|6[1-6])))([T\\s]((([01]\\d|2[0-3])((:?)[0-5]\\d)?|24\\:?00)([\\.,]\\d+(?!:))?)?(\\17[0-5]\\d([\\.,]\\d+)?)?([zZ]|([\\+-])([01]\\d|2[0-3]):?([0-5]\\d)?)?)?)?$", message = "Must be an ISO 8601 date")
     @JsonbProperty("published_date")
     private String publishedDate;
