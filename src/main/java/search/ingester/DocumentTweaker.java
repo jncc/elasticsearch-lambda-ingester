@@ -4,7 +4,7 @@ import search.ingester.models.Document;
 
 public class DocumentTweaker {
     
-    static void setContentTruncatedField(Document doc) {
+    public static void setContentTruncatedField(Document doc) {
         
         // we populate the content_truncated field because that's what we actually show
         // in the search results (when not using highlights).
