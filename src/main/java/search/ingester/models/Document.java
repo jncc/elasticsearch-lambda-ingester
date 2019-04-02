@@ -28,7 +28,7 @@ public class Document {
     @JsonbProperty("title")
     private String title;
 
-    @NotEmpty
+    //@NotEmpty
     @JsonbProperty("keywords")
     private List<Keyword> keywords;
 
