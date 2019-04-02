@@ -53,7 +53,7 @@ public class FileParser {
 
         // If a title exists in the document metadata replace the document title with it
         if (metadata.get("title") != null) {
-            document.setTitle(metadata.get("title"));
+            document.setTitle(String.format("%s - %s", document.getTitle(), metadata.get("title")));
         }
 
         // Clear b64 encoded file
