@@ -1,5 +1,6 @@
 package search.ingester;
 
+import java.time.Instant;
 import search.ingester.models.Document;
 
 public class DocumentTweaker {
@@ -21,5 +22,10 @@ public class DocumentTweaker {
         }
     
         doc.setContentTruncated(c);
+    }
+
+    public static void setTimestamp(Document doc) {
+        // an ISO date-time string
+        doc.setTimestampUtc(Instant.now().toString());
     }
 }

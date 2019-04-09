@@ -73,6 +73,7 @@ public class Processor {
     private void prepareDocument(Document doc) throws IOException {
         extractContentFromFileBase64IfNecessary(doc);
         DocumentTweaker.setContentTruncatedField(doc);
+        DocumentTweaker.setTimestamp(doc);
         validateDocument(doc);
     }    
 

@@ -14,7 +14,7 @@ import java.util.List;
 
 @NotBlankIfAnotherFieldIsBlank(fieldName="content", dependFieldName = "fileBase64")
 public class Document {
-    
+
     @NotBlank
     @JsonbProperty("id")
     private String id;
@@ -70,6 +70,10 @@ public class Document {
     @JsonbProperty("parent_resource_type")
     private String parentResourceType;
 
+    @NotBlank
+    @JsonbProperty("timestamp_utc")
+    private String timestampUtc;
+    
     public String getId() { return id; }
     public void setId(String id) { this.id = id; }
 
@@ -114,6 +118,9 @@ public class Document {
 
     public String getParentResourceType() { return parentResourceType; }
     public void setParentResourceType(String parentResourceType) { this.parentResourceType = parentResourceType; }
+
+    public String getTimestampUtc() { return timestampUtc; }
+    public void setTimestampUtc(String timestampUtc) { this.timestampUtc = timestampUtc; }
 
     public ImmutablePair<Boolean, String> nonAnnotationValidation() {
         if (StringUtils.isBlank(fileBase64) && StringUtils.isBlank(content)) {
