@@ -40,12 +40,11 @@ public class Ingester implements RequestHandler<SQSEvent, Void> {
             System.out.println(":: Message received :: ");
             System.out.println(msg.getBody());
 
-            // deserialize a Message from the JSON body of the SQS message 
-            Jsonb jsonb = JsonbBuilder.create();
-            Message message = jsonb.fromJson(msg.getBody(), Message.class);
-
             // workaround Java's checked exceptions
-            try {
+            // Automatically close `file` handler to sidestep long running lambda keeping in memory file references
+            try (Jsonb jsonb = JsonbBuilder.create()) {
+                // deserialize a Message from the JSON body of the SQS message
+                Message message = jsonb.fromJson(msg.getBody(), Message.class);
                 handleMessage(message, new Processor(new ElasticService(new Env()), new FileParser()));
             }
             catch (Exception ex) {
@@ -57,7 +56,7 @@ public class Ingester implements RequestHandler<SQSEvent, Void> {
         return null;
     }
 
-    void handleMessage(Message original, Processor processor) throws IOException {
+    void handleMessage(Message original, Processor processor) throws Exception {
 
         // the "real" message might be on S3 storage via the SQS Extended Client
         // in which case we will have two properties pointing to the S3 object
@@ -86,9 +85,9 @@ public class Ingester implements RequestHandler<SQSEvent, Void> {
      * @param bucket The bucket that the file exists in
      * @param key The full key of the file in the S3 Bucket
      * @return A translated Message object generated from the JSON read from the given S3 file
-     * @throws IOException If the S3 file cannot be streamed down from S3 this error will be thrown
+     * @throws Exception If the S3 file cannot be streamed down from S3 this error will be thrown
      */
-    private Message getMessageFromS3(String bucket, String key) throws IOException {
+    private Message getMessageFromS3(String bucket, String key) throws Exception {
         // Get the object reference and build a buffered reader around it
         S3Object fullObject = s3Client.getObject(new GetObjectRequest(bucket, key));
         BufferedReader reader = new BufferedReader(new InputStreamReader(fullObject.getObjectContent()));
@@ -101,7 +100,10 @@ public class Ingester implements RequestHandler<SQSEvent, Void> {
         }
 
         // Return the extracted message object from the S3 JSON file
-        return JsonbBuilder.create().fromJson(text, Message.class);
+        // Automatically close `file` handler to sidestep long running lambda keeping in memory file references
+        try (Jsonb jsonb = JsonbBuilder.create()) {
+            return jsonb.fromJson(text, Message.class);
+        }
     }
 
     /**
