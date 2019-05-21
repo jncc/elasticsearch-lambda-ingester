@@ -25,11 +25,37 @@ import search.ingester.models.Document;
 public class ElasticService {
 
     private Env env;
-    public RestHighLevelClient esClient;
+    private static RestHighLevelClient esClient;
+
 
     public ElasticService(Env env) {
         this.env = env;
-        this.esClient = esClient();
+    }
+
+    /**
+     * Create configured a High Level Elasticsearch REST client with an AWS http interceptor to sign the data package
+     * being sent
+     *
+     * @return A Configured High Level Elasticsearch REST client to send packets to an AWS ES service
+     */
+    private static RestHighLevelClient getEsClient(Env env) {
+        RestHighLevelClient client = ElasticService.esClient;
+
+        if (client == null) {
+            String awsServiceName = "es";
+            AWS4Signer signer = new AWS4Signer();
+            signer.setServiceName(awsServiceName);
+            signer.setRegionName(env.AWS_REGION());
+            HttpRequestInterceptor interceptor =
+                    new AWSRequestSigningApacheInterceptor(awsServiceName, signer, new DefaultAWSCredentialsProviderChain());
+            client = new RestHighLevelClient(
+                    RestClient.builder(HttpHost.create(env.ES_ENDPOINT()))
+                            .setHttpClientConfigCallback(callback -> callback.addInterceptorLast(interceptor)));
+
+            ElasticService.esClient = client;
+        }
+
+        return client;
     }
 
     public void putDocument(String index, Document doc) throws IOException {
@@ -39,7 +65,7 @@ public class ElasticService {
         Jsonb jsonb = JsonbBuilder.create();
         req.source(jsonb.toJson(doc), XContentType.JSON);
 
-        IndexResponse resp = this.esClient.index(req, RequestOptions.DEFAULT);
+        IndexResponse resp = ElasticService.getEsClient(env).index(req, RequestOptions.DEFAULT);
 
         if (!(resp.getResult() == DocWriteResponse.Result.CREATED
                 || resp.getResult() == DocWriteResponse.Result.UPDATED)) {
@@ -52,7 +78,7 @@ public class ElasticService {
     public void deleteDocument(String index, String docId) throws IOException {
 
         DeleteRequest request = new DeleteRequest(index, env.ES_DOCTYPE(), docId);
-        DeleteResponse response = this.esClient.delete(request, RequestOptions.DEFAULT);
+        DeleteResponse response = ElasticService.getEsClient(env).delete(request, RequestOptions.DEFAULT);
 
         if (response.getResult() != DocWriteResponse.Result.DELETED) {
             throw new RuntimeException(
@@ -66,28 +92,8 @@ public class ElasticService {
         DeleteByQueryRequest req = new DeleteByQueryRequest(index);
         req.setQuery(QueryBuilders.matchQuery("parent_id", parentDocId));
 
-        BulkByScrollResponse res = this.esClient.deleteByQuery(req, RequestOptions.DEFAULT);
+        BulkByScrollResponse res = ElasticService.getEsClient(env).deleteByQuery(req, RequestOptions.DEFAULT);
 
         // TODO: Need to check the response of this
-    }
-
-    /**
-     * Create configured a High Level Elasticsearch REST client with an AWS http interceptor to sign the data package
-     * being sent
-     * 
-     * TODO: This should probably be created in the constructor as a singleton
-     *
-     * @return A Configured High Level Elasticsearch REST client to send packets to an AWS ES service
-     */
-    private RestHighLevelClient esClient() {
-        String awsServiceName = "es";
-        AWS4Signer signer = new AWS4Signer();
-        signer.setServiceName(awsServiceName);
-        signer.setRegionName(env.AWS_REGION());
-        HttpRequestInterceptor interceptor =
-                new AWSRequestSigningApacheInterceptor(awsServiceName, signer, new DefaultAWSCredentialsProviderChain());
-        return new RestHighLevelClient(
-                RestClient.builder(HttpHost.create(env.ES_ENDPOINT()))
-                        .setHttpClientConfigCallback(callback -> callback.addInterceptorLast(interceptor)));
     }
 }
