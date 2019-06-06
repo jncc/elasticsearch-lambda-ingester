@@ -81,9 +81,14 @@ public class ElasticService {
         DeleteResponse response = ElasticService.getEsClient(env).delete(request, RequestOptions.DEFAULT);
 
         if (response.getResult() != DocWriteResponse.Result.DELETED) {
-            throw new RuntimeException(
-                    String.format("Index Response not as expected. Got (%d) with the following " +
-                            "returned %s", response.status().getStatus(), response.toString()));
+            // we only have one queue for all environments, so avoid filling it with 404s which
+            // can happen more easily in non-live environments
+            boolean nonLive404 = !index.startsWith("live") && response.status().getStatus() == 404;
+            if (!nonLive404) {
+                throw new RuntimeException(
+                        String.format("Index Response not as expected. Got (%d) with the following " +
+                                "returned %s", response.status().getStatus(), response.toString()));
+            }
         }
     }    
 
